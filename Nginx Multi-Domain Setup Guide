@@ -1,0 +1,18 @@
+# Nginx Multi-Domain Setup Guide
+
+## Prerequisites
+- A Linux server (Debian/Ubuntu distribution assumed).
+- `sudo` or root privileges.
+- DNS A-records for both domains pointing to the server's public IP address.
+
+---
+
+## Step 1: Update Packages & Install Nginx
+
+Ensure your package lists are up-to-date before installing the web server.
+
+```bash
+sudo apt update
+sudo apt upgrade -y
+sudo apt install nginx -y
+
