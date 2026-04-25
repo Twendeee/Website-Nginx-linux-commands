@@ -1,18 +1,164 @@
-# Nginx Multi-Domain Setup Guide
+Nginx Multi-Domain Setup Guide
 
-## Prerequisites
-- A Linux server (Debian/Ubuntu distribution assumed).
-- `sudo` or root privileges.
-- DNS A-records for both domains pointing to the server's public IP address.
+Prerequisites
+A Linux server (Debian/Ubuntu distribution assumed).
+sudo or root privileges.
+DNS A-records for both domains pointing to the server's public IP address.
 
----
-
-## Step 1: Update Packages & Install Nginx
+tep 1: Update Packages & Install Nginx
 
 Ensure your package lists are up-to-date before installing the web server.
 
-```bash
+Before you start, you must have a domain name (like example.com) pointed to your server's IP address (160.x.x.x).
+
+Go to your domain registrar (Namecheap, GoDaddy, etc.).
+Add an A Record with Name @ pointing to 160.x.x.x.
+Add a A Record Record with Name www pointing to @.
+
+Step 1: Install Nginx and Firewall
+bash
 sudo apt update
-sudo apt upgrade -y
 sudo apt install nginx -y
+sudo ufw allow 'Nginx Full'
+
+Step 2: Install MySQL (Database)
+You'll need this to store data for most modern websites.
+sudo apt install mysql-server -y
+sudo mysql_secure_installation
+Pro-Tip: When it asks for "VALIDATE PASSWORD", I usually say Y and pick 2 (Strong). Follow the prompts to remove anonymous users and the test database.
+
+Step 3: Install PHP 8.3
+Ubuntu 24.04 ships with PHP 8.3. We need php-fpm (to talk to Nginx) and php-mysql (to talk to your database).
+sudo apt install php-fpm php-mysql -y
+
+Step 4: Configure Nginx for your Domain
+We need to tell Nginx to use PHP and where your files are.
+1. Create the directory:
+sudo mkdir -p /var/www/twendeee.site
+sudo chown -R $USER:$USER /var/www/twendeee.site
+2. Create the config:
+sudo nano /etc/nginx/sites-available/twendeee.site
+3. Paste this exact block:
+server {
+    listen 80;
+    server_name twendeee.site www.twendeee.site;
+    root /var/www/twendeee.site;
+    index index.php index.html index.htm;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+    }
+}
+
+4. Enable and Test:
+sudo ln -s /etc/nginx/sites-available/twendeee.site /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+
+Step 5: Get your SSL Certificate (The final touch)
+sudo apt install certbot python3-certbot-nginx -y
+sudo certbot --nginx -d twendeee.site -d www.twendeee.site
+
+1. Create a Test File
+nano /var/www/twendeee.site/index.html
+Paste this in:
+<h1>Hello! Your website is now live!</h1>
+(Save with Ctrl+O, Enter, then Ctrl+X to exit).
+
+2. Fix Permissions
+# Set the owner to www-data (the web server user)
+sudo chown -R www-data:www-data /var/www/twendeee.site
+sudo chmod -R 755 /var/www/twendeee.site
+
+3. Verify Nginx can "See" the Path
+sudo chmod +x /var/www
+
+4. Restart Nginx
+sudo nginx -t
+sudo systemctl restart nginx
+
+How to Secure Your Server with UFW
+1. Allow SSH (Termius):
+sudo ufw allow OpenSSH
+2. Enable the Firewall:
+sudo ufw enable
+(Press y when it warns you about disrupting connections).
+Now check the status again:
+sudo ufw status or sudo ufw status verbose
+
+
+Here is the exact step-by-step for chocohills.com.
+
+Step 1: Namecheap DNS (The "Two A Records" Way)
+Go to the Advanced DNS tab for chocohills.com and add these two records:
+
+A Record
+
+Host: @
+
+Value: 160.x.x.x
+
+A Record
+
+Host: www
+
+Value: 160.x.x.x
+
+Step 2: Create the Folders
+sudo mkdir -p /var/www/chocohills.com
+sudo chown -R $USER:$USER /var/www/chocohills.com
+
+Step 3: Create the Nginx Config
+sudo nano /etc/nginx/sites-available/chocohills.com
+Paste this in:
+server {
+    listen 80;
+    server_name chocohills.com www.chocohills.com;
+    root /var/www/chocohills.com;
+    index index.php index.html index.htm;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+    }
+}
+(Save with Ctrl+O, Enter, then Ctrl+X).
+
+Step 4: Activate the New Site
+Link the file and restart Nginx:
+sudo ln -s /etc/nginx/sites-available/chocohills.com /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+
+Step 5: Install the SSL Certificate
+Wait about 2 minutes for the DNS to settle, then run Certbot:
+sudo certbot --nginx -d chocohills.com -d www.chocohills.com
+
+Step 6: Fix Permissions
+Because you'll be uploading files via SFTP later, make sure Nginx has the right permissions for this new folder:
+sudo chown -R www-data:www-data /var/www/chocohills.com
+sudo chmod -R 755 /var/www/chocohills.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
